@@ -72,7 +72,7 @@ test('two example stacks, side by side', { skip: !process.env['FRAZIL_LIVE'] }, 
     for (const p of ['example-livea', 'example-liveb']) {
       spawnSync('docker', ['compose', '-p', p, 'down', '-v'], { encoding: 'utf8' });
     }
-    docker('volume', 'rm', '--force', 'stack-example-shared');
+    docker('volume', 'rm', '--force', 'frazil-example-shared');
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
