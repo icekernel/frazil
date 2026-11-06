@@ -1,7 +1,8 @@
 name: release
-# A tag v<version> on main publishes that version to npm. The token is the
-# repo secret NPM_TOKEN (an npm granular token, publish rights on frazil only);
-# provenance ties the package to this workflow run.
+# A tag v<version> on main publishes that version to npm by trusted publishing:
+# npm trusts this repo's release.yml (set on npmjs.com, frazil's settings), and
+# the job's OIDC token stands in for a stored one. npm adds provenance itself.
+# 0.1.0 was published by hand: trusted publishing needs the package to exist.
 on:
   push:
     tags: ['v*']
@@ -30,6 +31,6 @@ jobs:
       - run: npm test
       - run: npm run test:dist
       - run: npm run test:live
-      - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # Trusted publishing needs npm 11.5.1 or later.
+      - run: npm install --global npm@11.12.1 && npm --version
+      - run: npm publish --access public
