@@ -769,3 +769,13 @@ for (const args of [['--help'], ['-h'], ['help'], []]) {
     }),
   );
 }
+
+test(
+  'an unknown verb prints the verbs, with no config anywhere',
+  withBox((box) => {
+    const got = box.run(box.root, ['bogus']);
+    assert.equal(got.status, 2);
+    assert.match(got.stderr, /^frazil: usage: frazil/);
+    assert.match(got.stderr, /\bprune\b/);
+  }),
+);
