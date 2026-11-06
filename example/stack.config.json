@@ -1,0 +1,14 @@
+{
+  "prefix": "example",
+  "envFiles": ["~/.config/stack-example/env", ".env"],
+  "ports": { "EXAMPLE_WEB_PORT": 18080 },
+  "volumes": { "derived": ["cache"], "data": ["data"], "shared": ["stack-example-shared"] },
+  "addresses": { "web": "http://localhost:${EXAMPLE_WEB_PORT}" },
+  "test": {
+    "vars": { "RUN_FILE": "run-{run}" },
+    "digest": ["exec", "-T", "web", "sh", "-c", "cat /data/seed"],
+    "before": [["exec", "-T", "web", "sh", "-c", "cp /data/seed /tmp/${RUN_FILE}"]],
+    "run": ["exec", "-T", "web", "sh", "-c", "wget -qO- http://127.0.0.1:8080/ && grep -q seeded /tmp/${RUN_FILE}"],
+    "after": [["exec", "-T", "web", "rm", "-f", "/tmp/${RUN_FILE}"]]
+  }
+}
