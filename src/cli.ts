@@ -560,6 +560,8 @@ async function main(argv: string[]): Promise<void> {
     args.splice(0, 2);
   }
   const verb = args.shift();
+  const VERBS = ['up', 'down', 'reset', 'logs', 'test', 'status', 'prune', 'doctor', 'compose'];
+  if (!VERBS.includes(verb ?? '')) throw new Failure(HELP, 2);
   const checkout = findCheckout();
   const config = readConfig(checkout);
 
@@ -571,9 +573,6 @@ async function main(argv: string[]): Promise<void> {
       data: args.includes('--data'),
       unknown: args.includes('--unknown'),
     });
-  }
-  if (!['up', 'down', 'reset', 'logs', 'test', 'compose'].includes(verb ?? '')) {
-    throw new Failure(HELP, 2);
   }
 
   const [name, slot] = await claim(config, checkout, wanted);
