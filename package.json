@@ -1,6 +1,6 @@
 {
   "name": "frazil",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Named, slotted docker compose stacks tied to a checkout, several at once on one docker host",
   "license": "Apache-2.0",
   "type": "module",
