@@ -751,3 +751,21 @@ test(
     assert.match(got.stderr, /^frazil: usage: frazil \[--stack <name>\]/);
   }),
 );
+
+// --- help, anywhere: a stranger's first command (FRAZIL-01 review a21ab83).
+
+for (const args of [['--help'], ['-h'], ['help'], []]) {
+  test(
+    `${args.join(' ') || 'no arguments'} prints the verbs, with no config anywhere`,
+    withBox((box) => {
+      const got = box.run(box.root, args);
+      assert.equal(got.status, args.length ? 0 : 2, got.stderr);
+      const text = args.length ? got.stdout : got.stderr;
+      for (const verb of ['up', 'down', 'reset', 'logs', 'test', 'status', 'prune', 'doctor', 'compose']) {
+        assert.match(text, new RegExp(`\\b${verb}\\b`));
+      }
+      assert.match(text, /frazil\.config\.json/);
+      assert.deepEqual(got.calls, [], 'help runs no docker');
+    }),
+  );
+}
