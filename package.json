@@ -4,16 +4,35 @@
   "description": "Named, slotted docker compose stacks tied to a checkout, several at once on one docker host",
   "license": "Apache-2.0",
   "type": "module",
-  "bin": { "frazil": "dist/cli.js" },
-  "files": ["dist/cli.js", "dist/stack.js", "README.md", "LICENSE"],
-  "engines": { "node": ">=24" },
-  "repository": { "type": "git", "url": "git+https://github.com/icekernel/frazil.git" },
-  "keywords": ["docker", "compose", "worktree", "dev-environment", "agents"],
+  "bin": {
+    "frazil": "dist/cli.js"
+  },
+  "files": [
+    "dist/cli.js",
+    "dist/stack.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/icekernel/frazil.git"
+  },
+  "keywords": [
+    "docker",
+    "compose",
+    "worktree",
+    "dev-environment",
+    "agents"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "node --test 'src/*.test.ts'",
     "test:dist": "npm run build && FRAZIL_CLI=dist/cli.js node --test 'src/*.test.ts'",
-    "test:live": "FRAZIL_LIVE=1 node --test src/live.test.ts"
+    "test:live": "FRAZIL_LIVE=1 node --test src/live.test.ts",
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "@types/node": "24.19.2",
