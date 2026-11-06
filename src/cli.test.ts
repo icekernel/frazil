@@ -698,8 +698,10 @@ test(
   }),
 );
 
+// Copied, not moved: checkouts still on the old tool keep their slots while
+// both run on one host (found 2026-11-06 on the operator's laptop).
 test(
-  'an old registry moves to the frazil state dir and keeps its slots',
+  'an old registry is copied to the frazil state dir and keeps its slots',
   withBox((box) => {
     const repo = box.checkout();
     const old = path.join(box.root, 'state', 'stack');
@@ -712,7 +714,7 @@ test(
     assert.equal(got.status, 0, got.stderr);
     assert.equal(JSON.parse(fs.readFileSync(path.join(repo, '.frazil.json'), 'utf8')).slot, 3);
     assert.ok(fs.existsSync(path.join(box.root, 'state', 'frazil', 'demo.json')));
-    assert.ok(!fs.existsSync(path.join(old, 'demo.json')));
+    assert.ok(fs.existsSync(path.join(old, 'demo.json')), 'the old registry stays');
   }),
 );
 
@@ -724,6 +726,19 @@ test(
     assert.equal(box.run(repo, ['up', '-d']).status, 0);
     assert.ok(!fs.existsSync(path.join(repo, '.stack.json')));
     assert.ok(fs.existsSync(path.join(repo, '.frazil.json')));
+  }),
+);
+
+test(
+  'doctor and status read the old registry and leave it in place',
+  withBox((box) => {
+    const repo = box.checkout({ home: 'DEMO_TOKEN=1\n' });
+    const old = path.join(box.root, 'state', 'stack');
+    fs.mkdirSync(old, { recursive: true });
+    fs.writeFileSync(path.join(old, 'demo.json'), JSON.stringify({ stacks: {} }));
+    box.run(repo, ['doctor']);
+    box.run(repo, ['status']);
+    assert.ok(fs.existsSync(path.join(old, 'demo.json')));
   }),
 );
 
