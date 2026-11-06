@@ -11,7 +11,9 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const CLI = path.join(HERE, 'cli.ts');
+const CLI = process.env['FRAZIL_CLI']
+  ? path.resolve(process.env['FRAZIL_CLI'])
+  : path.join(HERE, 'cli.ts');
 
 test('two example stacks, side by side', { skip: !process.env['FRAZIL_LIVE'] }, () => {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'frazil-live-')));

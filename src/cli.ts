@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // frazil: runs one named, slotted compose stack per checkout, and finds the
 // others. It knows nothing of the application; frazil.config.json, found upward
 // from the working directory, holds that. See README.md.

@@ -12,7 +12,9 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const CLI = path.join(path.dirname(fileURLToPath(import.meta.url)), 'cli.ts');
+const CLI = process.env['FRAZIL_CLI']
+  ? path.resolve(process.env['FRAZIL_CLI'])
+  : path.join(path.dirname(fileURLToPath(import.meta.url)), 'cli.ts');
 
 const STUB = `#!/usr/bin/env bash
 (IFS=$'\\t'; printf '%s\\n' "$*") >> "$STUB_LOG"
