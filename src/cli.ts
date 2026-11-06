@@ -86,13 +86,17 @@ function stateDir(): string {
   return path.join(stateRoot(), 'frazil');
 }
 
-/** A registry left in the old state dir moves here once, slots and all. */
+/**
+ * A registry left in the old state dir is copied here once, slots and all. It
+ * is copied, not moved: checkouts still on the old tool keep their slots while
+ * both run on one host, and a slot is only taken while its ports are free.
+ */
 function migrateRegistry(prefix: string): void {
   const old = path.join(stateRoot(), 'stack', `${prefix}.json`);
   const file = registryPath(prefix);
   if (fs.existsSync(old) && !fs.existsSync(file)) {
     fs.mkdirSync(stateDir(), { recursive: true });
-    fs.renameSync(old, file);
+    fs.copyFileSync(old, file, fs.constants.COPYFILE_EXCL);
   }
 }
 

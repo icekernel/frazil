@@ -104,7 +104,8 @@ Images are not pruned; `docker image prune` does that.
 
 frazil began as `tools/stack` inside one application. It still reads what that
 left behind: a `stack.config.json` (with a notice to rename it), a registry in
-`$XDG_STATE_HOME/stack/` (moved to `frazil/` on first use, slots kept), a
+`$XDG_STATE_HOME/stack/` (copied to `frazil/` on first use, slots kept; the old
+one stays for checkouts still on the old tool), a
 `.stack.json` (removed when `.frazil.json` is written) and volumes labelled
 `dev.stack.checkout` (docker cannot relabel a volume).
 
