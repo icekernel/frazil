@@ -10,6 +10,7 @@
   "files": [
     "dist/cli.js",
     "dist/stack.js",
+    "example/",
     "README.md",
     "LICENSE"
   ],

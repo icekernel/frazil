@@ -526,8 +526,33 @@ async function doctor(config: Config, checkout: string): Promise<void> {
 
 // --- Entry point.
 
+const HELP = `usage: frazil [--stack <name>] <verb> [args]
+
+Runs one named, slotted docker compose stack per checkout. The checkout is the
+nearest directory, here or above, holding ${CONFIG}.
+
+  up [args]         compose up, after taking a name and a slot
+  down [args]       compose down, then removes derived volumes; -v all of them
+  reset             down -v, then up -d --wait
+  logs [args]       compose logs
+  test              the config's test steps, around a digest of the data
+  status [--json]   every stack on this docker host
+  prune             what gone checkouts left; --yes, --data, --unknown remove
+  doctor            docker, compose, env files, ports, the package manager
+  compose <args>    any compose command, with the stack's name and ports
+
+  --stack <name>    names this checkout's stack on first use
+  -h, --help        this text
+
+https://github.com/icekernel/frazil`;
+
 async function main(argv: string[]): Promise<void> {
   const args = [...argv];
+  if (['--help', '-h', 'help'].includes(args[0] ?? '')) {
+    console.log(HELP);
+    return;
+  }
+  if (args.length === 0) throw new Failure(HELP, 2);
   let wanted: string | undefined;
   if (args[0] === '--stack') {
     wanted = args[1];
@@ -548,7 +573,7 @@ async function main(argv: string[]): Promise<void> {
     });
   }
   if (!['up', 'down', 'reset', 'logs', 'test', 'compose'].includes(verb ?? '')) {
-    throw new Failure('usage: frazil [--stack <name>] up|down|reset|logs|test|status|prune|doctor|compose ...', 2);
+    throw new Failure(HELP, 2);
   }
 
   const [name, slot] = await claim(config, checkout, wanted);

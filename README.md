@@ -24,8 +24,11 @@ frazil has no runtime dependencies.
 
 ## Quick start
 
+`example/` ships in the package (or take it from a clone of this repo):
+
 ```bash
-cp -R example /tmp/demo-a && cp -R example /tmp/demo-b
+ex="$(npm root --global)/frazil/example"   # after npm install --global frazil
+cp -R "$ex" /tmp/demo-a && cp -R "$ex" /tmp/demo-b
 mv /tmp/demo-a/compose.yml /tmp/demo-a/docker-compose.yml
 mv /tmp/demo-b/compose.yml /tmp/demo-b/docker-compose.yml
 (cd /tmp/demo-a && frazil up -d --wait)
