@@ -94,8 +94,8 @@ test('compose env: names the project, the labels, the ports and the tag', () => 
   });
   assert.deepEqual(env, {
     COMPOSE_PROJECT_NAME: 'demo-a',
-    STACK_NAME: 'a',
-    STACK_CHECKOUT: '/w/a',
+    FRAZIL_STACK: 'a',
+    FRAZIL_CHECKOUT: '/w/a',
     A_PORT: '8100',
     DEMO_TAG: 'abc',
   });

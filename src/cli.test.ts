@@ -16,7 +16,7 @@ const CLI = path.join(path.dirname(fileURLToPath(import.meta.url)), 'cli.ts');
 
 const STUB = `#!/usr/bin/env bash
 (IFS=$'\\t'; printf '%s\\n' "$*") >> "$STUB_LOG"
-env | grep -E '^(COMPOSE_PROJECT_NAME|STACK_|DEMO_)' | sort | tr '\\n' ' ' >> "$STUB_LOG.env"
+env | grep -E '^(COMPOSE_PROJECT_NAME|FRAZIL_|DEMO_)' | sort | tr '\\n' ' ' >> "$STUB_LOG.env"
 echo >> "$STUB_LOG.env"
 case "$1 $2" in
   "volume ls") cat "$STUB_VOLUMES" 2>/dev/null ;;
@@ -71,7 +71,7 @@ interface Opts {
 }
 
 class Sandbox {
-  root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'stack-cli-')));
+  root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'frazil-cli-')));
   homeDir = path.join(this.root, 'home');
   bin = path.join(this.root, 'bin');
   log = path.join(this.root, 'docker.log');
@@ -86,7 +86,7 @@ class Sandbox {
   checkout({ dir = 'repo', env, home, config = CONFIG }: Opts = {}): string {
     const repo = path.join(this.root, dir);
     fs.mkdirSync(repo, { recursive: true });
-    fs.writeFileSync(path.join(repo, 'stack.config.json'), JSON.stringify(config));
+    fs.writeFileSync(path.join(repo, 'frazil.config.json'), JSON.stringify(config));
     fs.writeFileSync(path.join(repo, 'lock'), 'v1\n');
     if (env !== undefined) fs.writeFileSync(path.join(repo, '.env'), env);
     if (home !== undefined) {
@@ -199,7 +199,7 @@ test(
     const repo = box.checkout({ dir: 'ABC-01-Probe.x' });
     const got = box.run(repo, ['up', '-d']);
     assert.match(got.envs, /COMPOSE_PROJECT_NAME=demo-abc-01-probex /);
-    assert.match(got.envs, new RegExp(`STACK_CHECKOUT=${repo} `));
+    assert.match(got.envs, new RegExp(`FRAZIL_CHECKOUT=${repo} `));
   }),
 );
 
@@ -234,8 +234,8 @@ test(
     const b = box.checkout({ dir: 'b' });
     box.run(a, ['up']);
     box.run(b, ['up']);
-    const fa = JSON.parse(fs.readFileSync(path.join(a, '.stack.json'), 'utf8'));
-    const fb = JSON.parse(fs.readFileSync(path.join(b, '.stack.json'), 'utf8'));
+    const fa = JSON.parse(fs.readFileSync(path.join(a, '.frazil.json'), 'utf8'));
+    const fb = JSON.parse(fs.readFileSync(path.join(b, '.frazil.json'), 'utf8'));
     assert.equal(fa.project, 'demo-a');
     assert.equal(fb.project, 'demo-b');
     assert.equal(fa.slot, 0);
@@ -256,7 +256,7 @@ test(
     box.run(b, ['up']);
     box.run(a, ['down']);
     box.run(a, ['up']);
-    assert.equal(JSON.parse(fs.readFileSync(path.join(a, '.stack.json'), 'utf8')).slot, 0);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(a, '.frazil.json'), 'utf8')).slot, 0);
   }),
 );
 
@@ -268,7 +268,7 @@ test(
     try {
       const repo = box.checkout();
       box.run(repo, ['up']);
-      assert.equal(JSON.parse(fs.readFileSync(path.join(repo, '.stack.json'), 'utf8')).slot, 1);
+      assert.equal(JSON.parse(fs.readFileSync(path.join(repo, '.frazil.json'), 'utf8')).slot, 1);
     } finally {
       await new Promise((r) => server.close(r));
     }
@@ -283,7 +283,7 @@ test(
     try {
       const repo = box.checkout({ dir: 'demo' });
       box.run(repo, ['up']);
-      assert.equal(JSON.parse(fs.readFileSync(path.join(repo, '.stack.json'), 'utf8')).slot, 0);
+      assert.equal(JSON.parse(fs.readFileSync(path.join(repo, '.frazil.json'), 'utf8')).slot, 0);
     } finally {
       await new Promise((r) => server.close(r));
     }
@@ -503,17 +503,18 @@ function pruneVolumes(box: Sandbox, live: string): void {
   const lines = [
     vol('demo-gone_cache', {
       'com.docker.compose.project': 'demo-gone',
-      'dev.stack.checkout': path.join(box.root, 'no-such-dir'),
+      'dev.frazil.checkout': path.join(box.root, 'no-such-dir'),
     }),
     vol('demo-gone_db', {
       'com.docker.compose.project': 'demo-gone',
-      'dev.stack.checkout': path.join(box.root, 'no-such-dir'),
+      'dev.frazil.checkout': path.join(box.root, 'no-such-dir'),
     }),
-    vol('demo-live_db', { 'com.docker.compose.project': 'demo-live', 'dev.stack.checkout': live }),
+    vol('demo-live_db', { 'com.docker.compose.project': 'demo-live', 'dev.frazil.checkout': live }),
     vol('old_db', { 'com.docker.compose.project': 'old' }),
     vol('old_retired', { 'com.docker.compose.project': 'old' }),
     vol('stranger_db', { 'com.docker.compose.project': 'stranger' }),
     vol('demo_db', { 'com.docker.compose.project': 'demo' }),
+    // Labelled before the rename to frazil (DEC-151 D3): still traced.
     vol('demo-gone_retired', {
       'com.docker.compose.project': 'demo-gone',
       'dev.stack.checkout': path.join(box.root, 'no-such-dir'),
@@ -608,7 +609,7 @@ test(
     box.run(a, ['prune', '--yes']);
     const c = box.checkout({ dir: 'c' });
     box.run(c, ['up']);
-    assert.equal(JSON.parse(fs.readFileSync(path.join(c, '.stack.json'), 'utf8')).slot, 1);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(c, '.frazil.json'), 'utf8')).slot, 1);
   }),
 );
 
@@ -654,9 +655,9 @@ test(
     try {
       const config = { ...CONFIG, ports: { DEMO_PORT: held } };
       const repo = box.checkout({ config, home: 'DEMO_TOKEN=1\n' });
-      fs.mkdirSync(path.join(box.root, 'state', 'stack'), { recursive: true });
+      fs.mkdirSync(path.join(box.root, 'state', 'frazil'), { recursive: true });
       fs.writeFileSync(
-        path.join(box.root, 'state', 'stack', 'demo.json'),
+        path.join(box.root, 'state', 'frazil', 'demo.json'),
         JSON.stringify({ stacks: { repo: { checkout: repo, slot: 0 } } }),
       );
       const got = box.run(repo, ['doctor']);
@@ -678,5 +679,58 @@ test(
     assert.equal(got.status, 1);
     assert.match(got.stdout, /fakepm/);
     assert.match(got.stdout, /1\.2\.3/);
+  }),
+);
+
+// --- the names before frazil (DEC-151 D3).
+
+test(
+  'an old stack.config.json is still found, with a notice',
+  withBox((box) => {
+    const repo = box.checkout();
+    fs.renameSync(path.join(repo, 'frazil.config.json'), path.join(repo, 'stack.config.json'));
+    const got = box.run(repo, ['up', '-d']);
+    assert.equal(got.status, 0, got.stderr);
+    assert.match(got.stderr, /frazil: stack\.config\.json is the old name; rename it frazil\.config\.json/);
+    assert.ok(fs.existsSync(path.join(repo, '.frazil.json')));
+  }),
+);
+
+test(
+  'an old registry moves to the frazil state dir and keeps its slots',
+  withBox((box) => {
+    const repo = box.checkout();
+    const old = path.join(box.root, 'state', 'stack');
+    fs.mkdirSync(old, { recursive: true });
+    fs.writeFileSync(
+      path.join(old, 'demo.json'),
+      JSON.stringify({ stacks: { repo: { checkout: repo, slot: 3 } } }),
+    );
+    const got = box.run(repo, ['up', '-d']);
+    assert.equal(got.status, 0, got.stderr);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(repo, '.frazil.json'), 'utf8')).slot, 3);
+    assert.ok(fs.existsSync(path.join(box.root, 'state', 'frazil', 'demo.json')));
+    assert.ok(!fs.existsSync(path.join(old, 'demo.json')));
+  }),
+);
+
+test(
+  'an old .stack.json is removed when .frazil.json is written',
+  withBox((box) => {
+    const repo = box.checkout();
+    fs.writeFileSync(path.join(repo, '.stack.json'), '{}');
+    assert.equal(box.run(repo, ['up', '-d']).status, 0);
+    assert.ok(!fs.existsSync(path.join(repo, '.stack.json')));
+    assert.ok(fs.existsSync(path.join(repo, '.frazil.json')));
+  }),
+);
+
+test(
+  'messages and usage name frazil',
+  withBox((box) => {
+    const repo = box.checkout();
+    const got = box.run(repo, ['no-such-verb']);
+    assert.equal(got.status, 2);
+    assert.match(got.stderr, /^frazil: usage: frazil \[--stack <name>\]/);
   }),
 );

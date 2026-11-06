@@ -1,6 +1,6 @@
 // The stack CLI against real docker and the example stack, not a stub. Runs only
-// with STACK_LIVE=1. Two throwaway checkouts run at once; everything is removed
-// after. `STACK_LIVE=1 node --test tools/stack/live.test.ts`
+// with FRAZIL_LIVE=1. Two throwaway checkouts run at once; everything is removed
+// after. `FRAZIL_LIVE=1 node --test src/live.test.ts`
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,8 +13,8 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CLI = path.join(HERE, 'cli.ts');
 
-test('two example stacks, side by side', { skip: !process.env['STACK_LIVE'] }, () => {
-  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'stack-live-')));
+test('two example stacks, side by side', { skip: !process.env['FRAZIL_LIVE'] }, () => {
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'frazil-live-')));
   const env = { ...process.env, XDG_STATE_HOME: path.join(root, 'state') };
   const checkouts = ['Live.A', 'Live.B'].map((dir) => path.join(root, dir));
   const stack = (cwd: string, ...args: string[]) => {
@@ -26,12 +26,12 @@ test('two example stacks, side by side', { skip: !process.env['STACK_LIVE'] }, (
   const volumes = () => docker('volume', 'ls', '--format', '{{.Name}}').split('\n');
   try {
     for (const c of checkouts) {
-      fs.cpSync(path.join(HERE, 'example'), c, { recursive: true });
+      fs.cpSync(path.join(HERE, '..', 'example'), c, { recursive: true });
       fs.renameSync(path.join(c, 'compose.yml'), path.join(c, 'docker-compose.yml'));
       stack(c, 'up', '-d', '--wait');
     }
     const [a, b] = checkouts.map(
-      (c) => JSON.parse(fs.readFileSync(path.join(c, '.stack.json'), 'utf8')) as {
+      (c) => JSON.parse(fs.readFileSync(path.join(c, '.frazil.json'), 'utf8')) as {
         project: string;
         ports: Record<string, number>;
       },
@@ -45,7 +45,7 @@ test('two example stacks, side by side', { skip: !process.env['STACK_LIVE'] }, (
     const read = stack(checkouts[0]!, 'compose', 'config', '--format', 'json');
     assert.equal((JSON.parse(read) as { name: string }).name, 'example-livea');
     const label = docker('volume', 'inspect', 'example-livea_data', '--format',
-      '{{index .Labels "dev.stack.checkout"}}');
+      '{{index .Labels "dev.frazil.checkout"}}');
     assert.equal(label.trim(), checkouts[0]);
 
     const status = JSON.parse(stack(checkouts[0]!, 'status', '--json')) as {
