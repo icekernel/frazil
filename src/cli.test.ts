@@ -360,7 +360,7 @@ test(
   withBox((box) => {
     const got = box.run(box.root, ['up']);
     assert.notEqual(got.status, 0);
-    assert.match(got.stderr, /stack\.config\.json/);
+    assert.match(got.stderr, /frazil\.config\.json/);
   }),
 );
 

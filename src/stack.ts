@@ -1,4 +1,4 @@
-// The stack tool's rules, free of I/O beyond reading files: how a checkout's
+// frazil's rules, free of I/O beyond reading files: how a checkout's
 // stack, project, ports and image tag are derived. cli.ts does the rest.
 
 import { createHash } from 'node:crypto';
@@ -9,7 +9,9 @@ import path from 'node:path';
 export const SLOT_STRIDE = 100;
 
 /** Volume labels, read back by `status` and `prune`. */
-export const LABEL_CHECKOUT = 'dev.stack.checkout';
+export const LABEL_CHECKOUT = 'dev.frazil.checkout';
+/** The label before the rename to frazil (DEC-151 D3); volumes cannot be relabelled. */
+export const LABEL_CHECKOUT_OLD = 'dev.stack.checkout';
 export const LABEL_PROJECT = 'com.docker.compose.project';
 export const LABEL_SERVICE = 'com.docker.compose.service';
 
@@ -99,8 +101,8 @@ export function composeEnv(s: {
 }): Record<string, string> {
   return {
     COMPOSE_PROJECT_NAME: s.project,
-    STACK_NAME: s.stack,
-    STACK_CHECKOUT: s.checkout,
+    FRAZIL_STACK: s.stack,
+    FRAZIL_CHECKOUT: s.checkout,
     ...Object.fromEntries(Object.entries(s.ports).map(([k, p]) => [k, String(p)])),
     ...(s.imageVar && s.imageTag ? { [s.imageVar]: s.imageTag } : {}),
   };

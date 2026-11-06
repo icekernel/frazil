@@ -1,9 +1,9 @@
-// stack: runs one named, slotted compose stack per checkout, and finds the
-// others. It knows nothing of the application; stack.config.json, found upward
-// from the working directory, holds that. See tools/stack/README.md.
+// frazil: runs one named, slotted compose stack per checkout, and finds the
+// others. It knows nothing of the application; frazil.config.json, found upward
+// from the working directory, holds that. See README.md.
 //
-//   stack [--stack <name>] up|down|reset|logs|test|status|prune|doctor
-//   stack [--stack <name>] compose <compose arguments>
+//   frazil [--stack <name>] up|down|reset|logs|test|status|prune|doctor
+//   frazil [--stack <name>] compose <compose arguments>
 
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
@@ -14,6 +14,7 @@ import path from 'node:path';
 import {
   type Config,
   LABEL_CHECKOUT,
+  LABEL_CHECKOUT_OLD,
   LABEL_PROJECT,
   LABEL_SERVICE,
   composeEnv,
@@ -54,19 +55,44 @@ interface Stack {
 
 // --- Config and the host's registry of stacks.
 
+const CONFIG = 'frazil.config.json';
+const STACK_FILE = '.frazil.json';
+/** The names before the rename to frazil (DEC-151 D3), still read and moved. */
+const OLD_CONFIG = 'stack.config.json';
+const OLD_STACK_FILE = '.stack.json';
+
 function findCheckout(): string {
   for (let dir = fs.realpathSync(process.cwd()); ; dir = path.dirname(dir)) {
-    if (fs.existsSync(path.join(dir, 'stack.config.json'))) return dir;
-    if (dir === path.dirname(dir)) throw new Failure('no stack.config.json here or above', 2);
+    if (fs.existsSync(path.join(dir, CONFIG)) || fs.existsSync(path.join(dir, OLD_CONFIG))) return dir;
+    if (dir === path.dirname(dir)) throw new Failure(`no ${CONFIG} here or above`, 2);
   }
 }
 
 function readConfig(checkout: string): Config {
-  return JSON.parse(fs.readFileSync(path.join(checkout, 'stack.config.json'), 'utf8')) as Config;
+  let file = path.join(checkout, CONFIG);
+  if (!fs.existsSync(file)) {
+    file = path.join(checkout, OLD_CONFIG);
+    console.error(`frazil: ${OLD_CONFIG} is the old name; rename it ${CONFIG}`);
+  }
+  return JSON.parse(fs.readFileSync(file, 'utf8')) as Config;
+}
+
+function stateRoot(): string {
+  return process.env['XDG_STATE_HOME'] || path.join(os.homedir(), '.local', 'state');
 }
 
 function stateDir(): string {
-  return path.join(process.env['XDG_STATE_HOME'] || path.join(os.homedir(), '.local', 'state'), 'stack');
+  return path.join(stateRoot(), 'frazil');
+}
+
+/** A registry left in the old state dir moves here once, slots and all. */
+function migrateRegistry(prefix: string): void {
+  const old = path.join(stateRoot(), 'stack', `${prefix}.json`);
+  const file = registryPath(prefix);
+  if (fs.existsSync(old) && !fs.existsSync(file)) {
+    fs.mkdirSync(stateDir(), { recursive: true });
+    fs.renameSync(old, file);
+  }
 }
 
 function registryPath(prefix: string): string {
@@ -74,6 +100,7 @@ function registryPath(prefix: string): string {
 }
 
 function readRegistry(prefix: string): Registry {
+  migrateRegistry(prefix);
   try {
     const raw = fs.readFileSync(registryPath(prefix), 'utf8');
     return (JSON.parse(raw) as { stacks: Registry }).stacks;
@@ -101,7 +128,7 @@ async function withLock<T>(prefix: string, fn: () => Promise<T>): Promise<T> {
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e;
       if (Date.now() - started > 10_000) {
-        throw new Failure(`${lock} held for 10s; remove it if no stack command is running`);
+        throw new Failure(`${lock} held for 10s; remove it if no frazil command is running`);
       }
       await new Promise((r) => setTimeout(r, 50));
     }
@@ -195,7 +222,8 @@ function writeStackFile(s: Stack): void {
     ports: s.ports,
     addresses,
   };
-  fs.writeFileSync(path.join(s.checkout, '.stack.json'), `${JSON.stringify(file, null, 2)}\n`);
+  fs.writeFileSync(path.join(s.checkout, STACK_FILE), `${JSON.stringify(file, null, 2)}\n`);
+  fs.rmSync(path.join(s.checkout, OLD_STACK_FILE), { force: true });
 }
 
 // --- Running docker.
@@ -257,7 +285,7 @@ function down(s: Stack, args: string[]): void {
 
 function runTest(s: Stack): void {
   const t = s.config.test;
-  if (!t) throw new Failure('stack.config.json has no "test"', 2);
+  if (!t) throw new Failure(`${CONFIG} has no "test"`, 2);
   createShared(s);
   const run = `${Date.now().toString(36)}${randomBytes(2).toString('hex')}`;
   const vars = Object.fromEntries(
@@ -285,7 +313,7 @@ function runTest(s: Stack): void {
   if (failed) throw failed;
   const after = digest();
   if (before !== after) throw new Failure(`digest changed: ${before} became ${after}`);
-  if (t.digest) console.log(`stack: digest unchanged: ${after}`);
+  if (t.digest) console.log(`frazil: digest unchanged: ${after}`);
 }
 
 interface PsRow {
@@ -394,7 +422,8 @@ function prune(config: Config, flags: { yes: boolean; data: boolean; unknown: bo
     const isDerived = suffix(row.Name, derived);
     if (!isDerived && !suffix(row.Name, data)) continue;
     const project = projectOf(row);
-    const where = parseLabels(row.Labels)[LABEL_CHECKOUT];
+    const labels = parseLabels(row.Labels);
+    const where = labels[LABEL_CHECKOUT] ?? labels[LABEL_CHECKOUT_OLD];
     if (where ? fs.existsSync(where) : live.has(project) || !ours(project)) continue;
     const take = (isDerived || flags.data) && (Boolean(where) || flags.unknown);
     const kind = `${where ? 'orphan' : 'unknown'} ${isDerived ? 'derived' : 'data'}`;
@@ -514,7 +543,7 @@ async function main(argv: string[]): Promise<void> {
     });
   }
   if (!['up', 'down', 'reset', 'logs', 'test', 'compose'].includes(verb ?? '')) {
-    throw new Failure('usage: stack [--stack <name>] up|down|reset|logs|test|status|prune|doctor|compose ...', 2);
+    throw new Failure('usage: frazil [--stack <name>] up|down|reset|logs|test|status|prune|doctor|compose ...', 2);
   }
 
   const [name, slot] = await claim(config, checkout, wanted);
@@ -534,7 +563,7 @@ async function main(argv: string[]): Promise<void> {
 
 main(process.argv.slice(2)).catch((e: unknown) => {
   if (e instanceof Failure) {
-    console.error(`stack: ${e.message}`);
+    console.error(`frazil: ${e.message}`);
     process.exit(e.code);
   }
   throw e;

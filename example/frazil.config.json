@@ -1,8 +1,8 @@
 {
   "prefix": "example",
-  "envFiles": ["~/.config/stack-example/env", ".env"],
+  "envFiles": ["~/.config/frazil-example/env", ".env"],
   "ports": { "EXAMPLE_WEB_PORT": 18080 },
-  "volumes": { "derived": ["cache"], "data": ["data"], "shared": ["stack-example-shared"] },
+  "volumes": { "derived": ["cache"], "data": ["data"], "shared": ["frazil-example-shared"] },
   "addresses": { "web": "http://localhost:${EXAMPLE_WEB_PORT}" },
   "test": {
     "vars": { "RUN_FILE": "run-{run}" },

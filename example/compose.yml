@@ -10,7 +10,7 @@ services:
     volumes:
       - data:/data
       - cache:/www
-      - stack-example-shared:/shared
+      - frazil-example-shared:/shared
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
       interval: 1s
@@ -19,9 +19,9 @@ services:
 volumes:
   data:
     labels:
-      dev.stack.checkout: ${STACK_CHECKOUT:-}
+      dev.frazil.checkout: ${FRAZIL_CHECKOUT:-}
   cache:
     labels:
-      dev.stack.checkout: ${STACK_CHECKOUT:-}
-  stack-example-shared:
+      dev.frazil.checkout: ${FRAZIL_CHECKOUT:-}
+  frazil-example-shared:
     external: true
