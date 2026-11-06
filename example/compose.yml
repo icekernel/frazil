@@ -1,0 +1,27 @@
+# The smallest stack the tool can drive, and the proof that its core knows
+# nothing of any one application: one web server, one data volume, one derived
+# volume, one volume shared across stacks.
+services:
+  web:
+    image: busybox:1.37
+    command: sh -c "echo seeded > /data/seed; echo ok > /www/index.html; exec httpd -f -p 8080 -h /www"
+    ports:
+      - "${EXAMPLE_WEB_PORT:-18080}:8080"
+    volumes:
+      - data:/data
+      - cache:/www
+      - frazil-example-shared:/shared
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
+      interval: 1s
+      retries: 10
+
+volumes:
+  data:
+    labels:
+      dev.frazil.checkout: ${FRAZIL_CHECKOUT:-}
+  cache:
+    labels:
+      dev.frazil.checkout: ${FRAZIL_CHECKOUT:-}
+  frazil-example-shared:
+    external: true

@@ -1,0 +1,3 @@
+#!/bin/sh
+# Refuses a commit whose staged files carry a secret. Enable: git config core.hooksPath .githooks
+exec python3 -I tools/secrets --staged

@@ -1,0 +1,35 @@
+name: release
+# A tag v<version> on main publishes that version to npm. The token is the
+# repo secret NPM_TOKEN (an npm granular token, publish rights on frazil only);
+# provenance ties the package to this workflow run.
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      # The tag must name package.json's version and a commit on main.
+      - run: |
+          want="v$(node -p "require('./package.json').version")"
+          test "$GITHUB_REF_NAME" = "$want" || { echo "tag $GITHUB_REF_NAME, package.json $want"; exit 1; }
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "$GITHUB_SHA is not on main"; exit 1; }
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      - run: npm run test:dist
+      - run: npm run test:live
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

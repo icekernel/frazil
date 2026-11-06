@@ -1,0 +1,18 @@
+#!/usr/bin/env python3
+"""Strips vendor co-author trailers and "Generated with" lines from a commit message, for any
+harness (ICE-16); co-authors who are people stay. Enable: git config core.hooksPath .githooks"""
+import re
+import sys
+from pathlib import Path
+
+# the vendors' bot addresses only: a person at one of these companies keeps the line
+VENDOR = re.compile(r"^co-authored-by:\s*(copilot\b.*<[^>]*users\.noreply\.github\.com>|.*<(noreply@anthropic\.com|"
+                    r"codex@openai\.com|cursoragent@cursor\.com|noreply@aider\.chat)>)", re.I)
+GENERATED = re.compile(r"^\W*generated with \[?(claude code|codex|cursor|aider|gemini)", re.I)
+
+f = Path(sys.argv[1])
+lines = [x for x in f.read_text().splitlines() if not (VENDOR.search(x) or GENERATED.search(x))]
+while lines and not lines[-1].strip():
+    lines.pop()
+text = "\n".join(lines) + "\n"
+f.write_text(re.sub(r"\n{3,}", "\n\n", text))
